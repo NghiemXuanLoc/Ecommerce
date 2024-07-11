@@ -8,14 +8,16 @@ import { addCart } from "../redux/action";
 import { Footer, Navbar } from "../components";
 import { toast } from "react-toastify";
 import { context } from "../contexts/ProviderLogin";
+import axios from "axios";
 
 const Product = () => {
-  const { isLogin } = useContext(context);
+  const { isLogin, getUserByUserId } = useContext(context);
   const { id } = useParams();
   const [product, setProduct] = useState([]);
   const [similarProducts, setSimilarProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loading2, setLoading2] = useState(false);
+  const [reviewList, setReviewList] = useState([]);
 
   const dispatch = useDispatch();
 
@@ -26,6 +28,17 @@ const Product = () => {
     } else {
       toast.error("Please log in to use this feature!");
     }
+  };
+
+  const fetchRevews = async () => {
+    const response = await axios.get('http://localhost:9999/reviews');
+
+    let reviewByProduct = response.data.filter((review) => {
+      if(review.productId == id){
+        return true;
+      }
+    })
+    setReviewList(reviewByProduct);
   };
 
   useEffect(() => {
@@ -57,6 +70,8 @@ const Product = () => {
       setLoading2(false);
     };
     getProduct();
+
+    fetchRevews();
   }, [id]);
 
 
@@ -83,6 +98,9 @@ const Product = () => {
       </>
     );
   };
+
+  console.log("review: ", reviewList);
+  
 
   const ShowProduct = () => {
     return (
@@ -121,6 +139,21 @@ const Product = () => {
               <Link to="/cart" className="btn btn-dark mx-3">
                 Go to Cart
               </Link>
+            </div>
+
+            <div className="row">
+              <h3>Reviews <span>({reviewList.length})</span></h3>
+              {
+                reviewList.map((review) => {
+                  return (
+                    <div className="mt-2">
+                    <p><i className="fa-solid fa-user me-2"></i>{getUserByUserId(review.userId)?.username}</p>
+                    <p className="ms-2"><i className="fa-solid fa-calendar-days"></i> {review.createdAt} - <i className="fa-solid fa-star"></i> <span>{review.rating}</span></p>
+                    <p className="ms-3">{review.content} </p>
+                    </div>
+                  )
+                })
+              }
             </div>
           </div>
         </div>
