@@ -8,14 +8,44 @@ import "react-loading-skeleton/dist/skeleton.css";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { context } from "../contexts/ProviderLogin";
+import axios from "axios";
 // loc
 
-const Products = () => {
+
+
+const LastProduct = () => {
+
   const [data, setData] = useState([]);
-  const [filter, setFilter] = useState(data);
+
+  const { productList, setProductList } = useContext(context);
+
+
+  const getTop3LastProductAll = (data) => {
+    let temp = [...data];
+
+    temp.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+
+      return dateB - dateA;
+    })
+
+
+    let top3Product = temp.filter((product, index) => {
+      if (index <= 3) {
+        return true;
+      }
+    })
+
+
+    return top3Product;
+  }
+
+
+  const [filter, setFilter] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const { isLogin, searchTerm, setSearchTerm } = useContext(context);
+  const { isLogin } = useContext(context);
 
   let componentMounted = true;
 
@@ -30,33 +60,39 @@ const Products = () => {
     }
   }
 
-  const getProductBySearchTerm = (data) => {
-    let updatedList = data;
-
-    if (searchTerm != '') {
-      updatedList = updatedList.filter(item => item.title.toLowerCase().includes(searchTerm.toLowerCase()));
+  const getProducts = async () => {
+    setLoading(true);
+    const response = await fetch("http://localhost:9999/products");
+    if (componentMounted) {
+      setData(await response.clone().json());
+      setFilter(getTop3LastProductAll(await response.json()));
+      setLoading(false);
     }
 
-    return updatedList;
-  }
+    return () => {
+      componentMounted = false;
+    };
+  };
+
+  const fetchProducts = async () => {
+    try {
+        setLoading(true);
+        const response = await axios.get('http://localhost:9999/products');
+        setData(response.data); // Cập nhật data với dữ liệu từ API
+        setFilter(getTop3LastProductAll(response.data)); // Xử lý và cập nhật filter
+        setLoading(false);
+    } catch (error) {
+        //   setError(error); // Xử lý lỗi và cập nhật state error
+        console.log(error);
+
+        setLoading(false);
+    }
+};
 
   useEffect(() => {
-    const getProducts = async () => {
-      setLoading(true);
-      const response = await fetch("  http://localhost:9999/products");
-      if (componentMounted) {
-        setData(await response.clone().json());
-        setFilter(getProductBySearchTerm(await response.json()));
-        setLoading(false);
-      }
-
-      return () => {
-        componentMounted = false;
-      };
-    };
-
-    getProducts();
-  }, [searchTerm]);
+    // getProducts();
+    fetchProducts();
+  }, []);
 
   const Loading = () => {
     return (
@@ -89,17 +125,32 @@ const Products = () => {
   const filterProduct = (cat) => {
     let updatedList = data.filter((item) => item.category === cat);
 
-    if (searchTerm != '') {
-      updatedList = updatedList.filter(item => item.title.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
+    let temp = [...updatedList];
 
-    setFilter(updatedList);
+    temp.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+
+      return dateB - dateA;
+    })
+
+    let top3Product = temp.filter((product, index) => {
+      if (index <= 3) {
+        return true;
+      }
+    })
+
+    setFilter(top3Product);
   }
+
+  console.log(filter);
+
+
   const ShowProducts = () => {
     return (
       <>
         <div className="buttons text-center py-5">
-          <button className="btn btn-outline-dark btn-sm m-2" onClick={() => setFilter(getProductBySearchTerm(data))}>All</button>
+          <button className="btn btn-outline-dark btn-sm m-2" onClick={() => setFilter(getTop3LastProductAll(data))}>All</button>
           <button className="btn btn-outline-dark btn-sm m-2" onClick={() => filterProduct("men's clothing")}>Men's Clothing</button>
           <button className="btn btn-outline-dark btn-sm m-2" onClick={() => filterProduct("women's clothing")}>
             Women's Clothing
@@ -110,7 +161,7 @@ const Products = () => {
 
         {filter.map((product) => {
           return (
-            <div id={product.id} key={product.id} className="col-md-4 col-sm-6 col-xs-8 col-12 mb-4">
+            <div id={product.id} key={product.id} className="col-md-3 col-sm-6 col-xs-8 col-12 mb-4">
               <div className="card text-center h-100" key={product.id}>
                 <img
                   className="card-img-top p-3"
@@ -163,4 +214,4 @@ const Products = () => {
   );
 };
 
-export default Products;
+export default LastProduct;

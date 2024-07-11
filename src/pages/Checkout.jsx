@@ -1,9 +1,39 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Footer, Navbar } from "../components";
-import { useSelector } from "react-redux";
-import { Link } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+
+import { useForm } from "react-hook-form";
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+import { context } from "../contexts/ProviderLogin";
+
+import axios from "axios";
+import { toast } from "react-toastify";
+import { clearCart } from "../redux/action";
+
+
+
+const schema = yup.object({
+  fullName: yup.string().required("fullName is not empty!"),
+  email: yup.string().email().required("Email is not empty"),
+  phoneNumber: yup.string().required("PhoneNumber is not empty"),
+  address: yup.string().required("address is not empty")
+})
+
+
 const Checkout = () => {
   const state = useSelector((state) => state.handleCart);
+
+  const dispatch = useDispatch();
+
+  const { isLogin, orderList, setOrderList, productList, setProductList, getProductById } = useContext(context);
+
+  const navigate = useNavigate();
+
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: yupResolver(schema)
+  });
 
   const EmptyCart = () => {
     return (
@@ -19,6 +49,150 @@ const Checkout = () => {
       </div>
     );
   };
+
+
+  function getCurrentDateTime() {
+    const now = new Date();
+
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0'); // Thêm số 0 nếu tháng chỉ có 1 chữ số
+    const day = String(now.getDate()).padStart(2, '0'); // Thêm số 0 nếu ngày chỉ có 1 chữ số
+    const hours = String(now.getHours()).padStart(2, '0'); // Thêm số 0 nếu giờ chỉ có 1 chữ số
+    const minutes = String(now.getMinutes()).padStart(2, '0'); // Thêm số 0 nếu phút chỉ có 1 chữ số
+    const seconds = String(now.getSeconds()).padStart(2, '0'); // Thêm số 0 nếu giây chỉ có 1 chữ số
+
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+  }
+
+
+  const createOrderToDatabase = async (order) => {
+    await axios.post('http://localhost:9999/orders', order);
+
+  };
+
+  function generateRandomNumber() {
+    let randomNumber = Math.floor(10000000 + Math.random() * 90000000); // Sinh số ngẫu nhiên từ 10000000 đến 99999999
+    return randomNumber.toString().substring(0, 8); // Chuyển số thành chuỗi và lấy 8 chữ số đầu tiên
+  }
+
+  const checkExitOrder = (orderId) => {
+    let isOrder = false;
+
+    orderList.forEach((order) => {
+      if (order.id == orderId) {
+        isOrder = true;
+      }
+    })
+
+    return isOrder;
+  }
+
+  const generateRandomOrderId = () => {
+    let orderId = generateRandomNumber();
+
+    while (checkExitOrder(orderId)) {
+      orderId = generateRandomNumber();
+    }
+
+
+    return orderId;
+  }
+
+
+  const updateProduct = async (product) => {
+    await axios.put(`http://localhost:9999/products/${product.id}`, product);
+  };
+
+
+  const submit = (data) => {
+
+    let subtotal = 0;
+    let shipping = 30.0;
+    let totalItems = 0;
+
+    state.map((item) => {
+      return (subtotal += item.price * item.qty);
+    });
+
+    state.map((item) => {
+      return (totalItems += item.qty);
+    });
+
+    let createOrder = getCurrentDateTime();
+    let userId = isLogin;
+
+    let orderDetail = [];
+
+
+
+
+    state.forEach((donHang) => {
+
+      let productSeMua = getProductById(donHang.id);
+
+      let quantitySeMua = donHang.qty;
+
+      // cap nhat lai so luong stock sold cua san pham se mua
+
+      productSeMua.quantityStock -= quantitySeMua;
+      productSeMua.quantitySold += quantitySeMua;
+
+      // cap nhat trong database
+      updateProduct(productSeMua);
+
+      // cap nhat lai productList;
+
+      let productListAfterMua = productList.map(pro => {
+        if (pro.id == productSeMua.id) {
+          return productSeMua;
+        } else {
+          return pro;
+        }
+      })
+
+      setProductList(productListAfterMua);
+
+
+      let detail = {
+        'productId': donHang.id,
+        'quantity': donHang.qty
+      }
+
+      orderDetail.push(detail);
+    })
+
+    let order = {
+      "id": generateRandomOrderId(),
+      "userId": userId,
+      ...data,
+      orderDetail,
+      "price": Math.round(subtotal),
+      "shipping": Math.round(shipping),
+      "totalPrice": Math.round(subtotal + shipping),
+      "status": "pending",
+      "createdAt": createOrder
+    }
+
+
+    // them vao new order vao state
+    setOrderList([
+      ...orderList,
+      order
+    ])
+
+    // them new order vao database
+
+    createOrderToDatabase(order);
+
+    toast.success("Order Success");
+
+    // xoa gio hang
+    dispatch(clearCart());
+
+    navigate("/");
+  }
+
+
 
   const ShowCheckout = () => {
     let subtotal = 0;
@@ -67,41 +241,29 @@ const Checkout = () => {
                   <h4 className="mb-0">Billing address</h4>
                 </div>
                 <div className="card-body">
-                  <form className="needs-validation" novalidate>
+                  <form className="needs-validation" onSubmit={handleSubmit(submit)}>
                     <div className="row g-3">
                       <div className="col-sm-6 my-1">
                         <label for="firstName" className="form-label">
-                          First name
+                          Full name
                         </label>
                         <input
                           type="text"
                           className="form-control"
                           id="firstName"
                           placeholder=""
-                          required
+                          {...register('fullName')}
                         />
+
+                        <span className="text-danger">{errors.fullName?.message}</span>
+
                         <div className="invalid-feedback">
                           Valid first name is required.
                         </div>
+
                       </div>
 
                       <div className="col-sm-6 my-1">
-                        <label for="lastName" className="form-label">
-                          Last name
-                        </label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          id="lastName"
-                          placeholder=""
-                          required
-                        />
-                        <div className="invalid-feedback">
-                          Valid last name is required.
-                        </div>
-                      </div>
-
-                      <div className="col-12 my-1">
                         <label for="email" className="form-label">
                           Email
                         </label>
@@ -109,16 +271,38 @@ const Checkout = () => {
                           type="email"
                           className="form-control"
                           id="email"
-                          placeholder="you@example.com"
-                          required
+                          placeholder="nghiemxuanloc02@gmail.com"
+                          {...register('email')}
                         />
+
+                        <span className="text-danger">{errors.email?.message}</span>
+
                         <div className="invalid-feedback">
                           Please enter a valid email address for shipping
                           updates.
                         </div>
                       </div>
 
-                      <div className="col-12 my-1">
+                      <div className="col-sm-6 my-1">
+                        <label for="address" className="form-label">
+                          PhoneNumber
+                        </label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          id="phoneNumber"
+                          placeholder="0337783926"
+                          {...register('phoneNumber')}
+                        />
+
+                        <span className="text-danger">{errors.phoneNumber?.message}</span>
+
+                        <div className="invalid-feedback">
+                          Please enter your shipping address.
+                        </div>
+                      </div>
+
+                      <div className="col-sm-6 my-1">
                         <label for="address" className="form-label">
                           Address
                         </label>
@@ -126,152 +310,32 @@ const Checkout = () => {
                           type="text"
                           className="form-control"
                           id="address"
-                          placeholder="1234 Main St"
-                          required
+                          placeholder="Phú Xuyên Hà Nội"
+                          {...register('address')}
                         />
+                        <span className="text-danger">{errors.address?.message}</span>
+
                         <div className="invalid-feedback">
                           Please enter your shipping address.
-                        </div>
-                      </div>
-
-                      <div className="col-12">
-                        <label for="address2" className="form-label">
-                          Address 2{" "}
-                          <span className="text-muted">(Optional)</span>
-                        </label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          id="address2"
-                          placeholder="Apartment or suite"
-                        />
-                      </div>
-
-                      <div className="col-md-5 my-1">
-                        <label for="country" className="form-label">
-                          Country
-                        </label>
-                        <br />
-                        <select className="form-select" id="country" required>
-                          <option value="">Choose...</option>
-                          <option>India</option>
-                        </select>
-                        <div className="invalid-feedback">
-                          Please select a valid country.
-                        </div>
-                      </div>
-
-                      <div className="col-md-4 my-1">
-                        <label for="state" className="form-label">
-                          State
-                        </label>
-                        <br />
-                        <select className="form-select" id="state" required>
-                          <option value="">Choose...</option>
-                          <option>Punjab</option>
-                        </select>
-                        <div className="invalid-feedback">
-                          Please provide a valid state.
-                        </div>
-                      </div>
-
-                      <div className="col-md-3 my-1">
-                        <label for="zip" className="form-label">
-                          Zip
-                        </label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          id="zip"
-                          placeholder=""
-                          required
-                        />
-                        <div className="invalid-feedback">
-                          Zip code required.
                         </div>
                       </div>
                     </div>
 
                     <hr className="my-4" />
 
-                    <h4 className="mb-3">Payment</h4>
+                    <h4 className="mb-3">Payment methods</h4>
 
                     <div className="row gy-3">
-                      <div className="col-md-6">
-                        <label for="cc-name" className="form-label">
-                          Name on card
-                        </label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          id="cc-name"
-                          placeholder=""
-                          required
-                        />
-                        <small className="text-muted">
-                          Full name as displayed on card
-                        </small>
-                        <div className="invalid-feedback">
-                          Name on card is required
-                        </div>
-                      </div>
-
-                      <div className="col-md-6">
-                        <label for="cc-number" className="form-label">
-                          Credit card number
-                        </label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          id="cc-number"
-                          placeholder=""
-                          required
-                        />
-                        <div className="invalid-feedback">
-                          Credit card number is required
-                        </div>
-                      </div>
-
-                      <div className="col-md-3">
-                        <label for="cc-expiration" className="form-label">
-                          Expiration
-                        </label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          id="cc-expiration"
-                          placeholder=""
-                          required
-                        />
-                        <div className="invalid-feedback">
-                          Expiration date required
-                        </div>
-                      </div>
-
-                      <div className="col-md-3">
-                        <label for="cc-cvv" className="form-label">
-                          CVV
-                        </label>
-                        <input
-                          type="text"
-                          className="form-control"
-                          id="cc-cvv"
-                          placeholder=""
-                          required
-                        />
-                        <div className="invalid-feedback">
-                          Security code required
-                        </div>
-                      </div>
+                      <p>COD</p>
                     </div>
 
                     <hr className="my-4" />
 
                     <button
                       className="w-100 btn btn-primary "
-                      type="submit" disabled
+                      type="submit"
                     >
-                      Continue to checkout
+                      Complete order
                     </button>
                   </form>
                 </div>
@@ -282,6 +346,8 @@ const Checkout = () => {
       </>
     );
   };
+
+
   return (
     <>
       <Navbar />

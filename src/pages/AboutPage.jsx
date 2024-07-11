@@ -8,19 +8,8 @@ const AboutPage = () => {
         <h1 className="text-center">About Us</h1>
         <hr />
         <p className="lead text-center">
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Nostrum
-          facere doloremque veritatis odit similique sequi. Odit amet fuga nam
-          quam quasi facilis sed doloremque saepe sint perspiciatis explicabo
-          totam vero quas provident ipsam, veritatis nostrum velit quos
-          recusandae est mollitia esse fugit dolore laudantium. Ex vel explicabo
-          earum unde eligendi autem praesentium, doloremque distinctio nesciunt
-          porro tempore quis eaque labore voluptatibus ea necessitatibus
-          exercitationem tempora molestias. Ad consequuntur veniam sequi ullam
-          tempore vel tenetur soluta dolore sunt maxime aliquam corporis est,
-          quo saepe dolorem optio minus sint nemo totam dolorum! Reprehenderit
-          delectus expedita a alias nam recusandae illo debitis repellat libero,
-          quasi explicabo molestiae saepe, dolorem tempore itaque eveniet quam
-          dignissimos blanditiis excepturi harum numquam vel nihil? Ipsum
+
+          Cửa hàng 360 Fashion Men là địa chỉ tin cậy dành cho những quý ông yêu thời trang tại thành phố này. Với một sự kết hợp tinh tế giữa phái mạnh và phong cách hiện đại, chúng tôi mang đến những bộ sưu tập đa dạng từ áo sơ mi, quần jeans đến các phụ kiện thời trang đẳng cấp. Với cam kết về chất lượng và dịch vụ tận tâm, 360 Fashion Men mong muốn mang đến cho các quý ông không chỉ là những bộ trang phục mà còn là sự tự tin và phong cách riêng biệt trong mọi hoàn cảnh.
         </p>
 
         <h2 className="text-center py-4">Our Products</h2>

@@ -1,7 +1,97 @@
-import React from 'react'
+import React, { useContext, useState } from 'react'
 import { Footer, Navbar } from "../components";
 import { Link } from 'react-router-dom';
+import { context } from '../contexts/ProviderLogin';
+import { toast } from 'react-toastify';
+import axios from 'axios';
+
 const Register = () => {
+
+    const { userList, setUserList } = useContext(context);
+
+    const getUserIdMax = () => {
+        let idMax = -1;
+        userList.forEach(element => {
+
+            if (idMax < element.id) {
+                idMax = element.id;
+            }
+        });
+
+        return idMax;
+    }
+
+
+    const [add, setAdd] = useState({
+        "userId": getUserIdMax() + 1,
+        "username": "",
+        "email": "",
+        "password": ""
+    });
+
+
+    const checkExitEmail = () => {
+        let isExit = false;
+
+        userList.forEach(user => {
+            if (add.email.toLowerCase() == user.email.toLowerCase()) {
+                isExit = true;
+            }
+        })
+
+        return isExit;
+    }
+
+
+    const checkExitUserName = () => {
+
+        let isExit = false;
+        userList.forEach(user => {
+            if (add.username.toLowerCase() == user.username.toLowerCase()) {
+                isExit = true;
+            }
+        })
+
+        return isExit;
+    }
+
+
+    const handleAdd = (e) => {
+        setAdd({
+            ...add,
+            [e.target.name]: e.target.value
+        })
+    }
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        if (add.username == '' || add.email == '' || add.password == '') {
+            toast.error("Please fill out all information fields completely");
+        } else {
+            if (checkExitEmail() == true) {
+                toast.error("Email already exists");
+            } else if (checkExitUserName() == true) {
+                toast.error("UserName already exists")
+            } else {
+                // thuc hien viec add
+                createUser(add);
+
+                toast.success("Register successfully");
+                setUserList([
+                    ...userList,
+                    add
+                ])
+            }
+        }
+    }
+    console.log(userList);
+    
+
+    const createUser = async (newUser) => {
+        await axios.post('http://localhost:9999/users', newUser);
+    };
+
     return (
         <>
             <Navbar />
@@ -10,13 +100,15 @@ const Register = () => {
                 <hr />
                 <div class="row my-4 h-100">
                     <div className="col-md-4 col-lg-4 col-sm-8 mx-auto">
-                        <form>
+                        <form onSubmit={handleSubmit}>
                             <div class="form my-3">
-                                <label for="Name">Full Name</label>
+                                <label for="Name">UserName</label>
                                 <input
-                                    type="email"
+                                    type="text"
                                     class="form-control"
-                                    id="Name"
+                                    id="fullName"
+                                    name='username'
+                                    onInput={handleAdd}
                                     placeholder="Enter Your Name"
                                 />
                             </div>
@@ -26,6 +118,8 @@ const Register = () => {
                                     type="email"
                                     class="form-control"
                                     id="Email"
+                                    name='email'
+                                    onInput={handleAdd}
                                     placeholder="name@example.com"
                                 />
                             </div>
@@ -35,6 +129,8 @@ const Register = () => {
                                     type="password"
                                     class="form-control"
                                     id="Password"
+                                    name='password'
+                                    onInput={handleAdd}
                                     placeholder="Password"
                                 />
                             </div>
@@ -42,7 +138,7 @@ const Register = () => {
                                 <p>Already has an account? <Link to="/login" className="text-decoration-underline text-info">Login</Link> </p>
                             </div>
                             <div className="text-center">
-                                <button class="my-2 mx-auto btn btn-dark" type="submit" disabled>
+                                <button class="my-2 mx-auto btn btn-dark" type="submit">
                                     Register
                                 </button>
                             </div>

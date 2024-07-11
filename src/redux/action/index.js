@@ -13,3 +13,16 @@ export const delCart = (product) =>{
         payload:product
     }
 }
+// xoa san pham khoi cart
+export const removeItemKhoiCart = (product) => {
+    return {
+        type: "REMOVEITEM",
+        payload: product
+    };
+};
+
+export const clearCart = () => {
+    return {
+        type: "CLEARCART"
+    };
+};

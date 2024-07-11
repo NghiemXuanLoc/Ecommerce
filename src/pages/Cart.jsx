@@ -1,12 +1,16 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Footer, Navbar } from "../components";
 import { useSelector, useDispatch } from "react-redux";
-import { addCart, delCart } from "../redux/action";
+import { addCart, delCart, removeItemKhoiCart } from "../redux/action";
 import { Link } from "react-router-dom";
+import { context } from "../contexts/ProviderLogin";
+import { toast } from "react-toastify";
 
 const Cart = () => {
   const state = useSelector((state) => state.handleCart);
   const dispatch = useDispatch();
+
+  const {isLogin} = useContext(context);
 
   const EmptyCart = () => {
     return (
@@ -30,6 +34,13 @@ const Cart = () => {
     dispatch(delCart(product));
   };
 
+
+  const removeAll = (product) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa sản phẩm này khỏi cart không?")) {
+      dispatch(removeItemKhoiCart(product));
+    }
+  }
+
   const ShowCart = () => {
     let subtotal = 0;
     let shipping = 30.0;
@@ -41,6 +52,9 @@ const Cart = () => {
     state.map((item) => {
       return (totalItems += item.qty);
     });
+
+    console.log(state);
+    
     return (
       <>
         <section className="h-100 gradient-custom">
@@ -103,6 +117,13 @@ const Cart = () => {
                                 >
                                   <i className="fas fa-plus"></i>
                                 </button>
+
+
+                                <button className="btn btn-sm btn-danger"
+                                  onClick={() => {
+                                    removeAll(item);
+                                  }}
+                                >Delete</button>
                               </div>
 
                               <p className="text-start text-md-center">
@@ -161,13 +182,17 @@ const Cart = () => {
     );
   };
 
+  if(isLogin == -1){
+    toast.error("Please log in to use this feature!");
+  }
+
   return (
     <>
       <Navbar />
       <div className="container my-3 py-3">
         <h1 className="text-center">Cart</h1>
         <hr />
-        {state.length > 0 ? <ShowCart /> : <EmptyCart />}
+        {isLogin != -1 ? (state.length > 0 ? <ShowCart /> : <EmptyCart />) : (<h2 className="text-danger d-flex justify-content-center">Please log in to use this feature!</h2>)}
       </div>
       <Footer />
     </>

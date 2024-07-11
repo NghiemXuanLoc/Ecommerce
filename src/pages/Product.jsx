@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import Skeleton from "react-loading-skeleton";
 import { Link, useParams } from "react-router-dom";
 import Marquee from "react-fast-marquee";
@@ -6,8 +6,11 @@ import { useDispatch } from "react-redux";
 import { addCart } from "../redux/action";
 
 import { Footer, Navbar } from "../components";
+import { toast } from "react-toastify";
+import { context } from "../contexts/ProviderLogin";
 
 const Product = () => {
+  const { isLogin } = useContext(context);
   const { id } = useParams();
   const [product, setProduct] = useState([]);
   const [similarProducts, setSimilarProducts] = useState([]);
@@ -17,26 +20,46 @@ const Product = () => {
   const dispatch = useDispatch();
 
   const addProduct = (product) => {
-    dispatch(addCart(product));
+    if (isLogin != -1) {
+      dispatch(addCart(product));
+      toast.success("Add to cart success");
+    } else {
+      toast.error("Please log in to use this feature!");
+    }
   };
 
   useEffect(() => {
     const getProduct = async () => {
       setLoading(true);
       setLoading2(true);
-      const response = await fetch(`https://fakestoreapi.com/products/${id}`);
+      const response = await fetch(`http://localhost:9999/products/${id}`);
       const data = await response.json();
       setProduct(data);
       setLoading(false);
-      const response2 = await fetch(
-        `https://fakestoreapi.com/products/category/${data.category}`
-      );
-      const data2 = await response2.json();
+
+      // ve sau se sua thanh 1 bang category rieng
+      // const response2 = await fetch(
+      //   `https://fakestoreapi.com/products/category/${data.category}`
+      // );
+      // const data2 = await response2.json();
+
+      // lay ve tat ca san pham, sau do filter theo category
+      const response2 = await fetch("http://localhost:9999/products");
+
+      let data2 = await response2.json();
+
+      data2 = data2.filter(pro => {
+        if (data.category == pro.category) {
+          return true;
+        }
+      })
       setSimilarProducts(data2);
       setLoading2(false);
     };
     getProduct();
   }, [id]);
+
+
 
   const Loading = () => {
     return (
@@ -79,10 +102,15 @@ const Product = () => {
               <h4 className="text-uppercase text-muted">{product.category}</h4>
               <h1 className="display-5">{product.title}</h1>
               <p className="lead">
-                {product.rating && product.rating.rate}{" "}
+                {product.rating && product.rating}{" "}
                 <i className="fa fa-star"></i>
               </p>
-              <h3 className="display-6  my-4">${product.price}</h3>
+              <div className="d-flex justify-content-between">
+                <h3 className="display-6  my-4">${product.price}</h3>
+                <p><strong>Quantity stock:</strong> {product.quantityStock}</p>
+                <p> <strong>Quantity sold:</strong> {product.quantitySold}</p>
+              </div>
+
               <p className="lead">{product.description}</p>
               <button
                 className="btn btn-outline-dark"
@@ -175,7 +203,7 @@ const Product = () => {
         <div className="row">{loading ? <Loading /> : <ShowProduct />}</div>
         <div className="row my-5 py-5">
           <div className="d-none d-md-block">
-          <h2 className="">You may also Like</h2>
+            <h2 className="">You may also Like</h2>
             <Marquee
               pauseOnHover={true}
               pauseOnClick={true}
